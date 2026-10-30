@@ -160,6 +160,7 @@
             font-size: 0.8rem;
         }
 
+        /* SVG Chart Styles */
         .chart-container {
             width: 100%;
             overflow-x: auto;
@@ -237,6 +238,16 @@
             font-size: 0.85rem;
         }
 
+        .badge {
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+
+        .badge-up { background: #dcfce7; color: var(--success); }
+        .badge-down { background: #fee2e2; color: var(--danger); }
+
         select {
             width: 100%;
             padding: 10px;
@@ -260,10 +271,12 @@
         
         <div class="form-group">
             <label>تاریخ آزمون / عنوان آزمون:</label>
-            <input type="text" id="examDate" placeholder="مثال: آزمون جامع شماره ۱">
+            <input type="text" id="examDate" placeholder="مثال: ۱۴۰۵/۰۸/۰۸ - ماز">
         </div>
 
-        <div id="subjectsContainer"></div>
+        <div id="subjectsContainer">
+            <!-- دروس به صورت برنامه‌نویسی اضافه می‌شوند -->
+        </div>
 
         <button class="btn" onclick="saveExam()">ثبت و محاسبه آزمون</button>
     </div>
@@ -277,7 +290,9 @@
             </select>
         </div>
         <div class="chart-container">
-            <div class="bar-chart" id="barChart"></div>
+            <div class="bar-chart" id="barChart">
+                <!-- نمودار ستونی در اینجا رسم می‌شود -->
+            </div>
         </div>
     </div>
 
@@ -287,7 +302,9 @@
             <span>📜 سوابق آزمون‌ها</span>
             <button class="btn btn-danger" onclick="clearAllData()">حذف همه داده‌ها</button>
         </div>
-        <div id="historyList"></div>
+        <div id="historyList">
+            <!-- سوابق در اینجا نمایش داده می‌شوند -->
+        </div>
     </div>
 
     <script>
@@ -307,29 +324,15 @@
             "زمین‌شناسی"
         ];
 
-        function getHistory() {
-            try {
-                return JSON.parse(localStorage.getItem('exam_history') || '[]');
-            } catch (e) {
-                return [];
-            }
-        }
-
-        function saveHistoryData(history) {
-            try {
-                localStorage.setItem('exam_history', JSON.stringify(history));
-            } catch (e) {}
-        }
-
+        // بارگذاری اولیه دروس در فرم
         function initForm() {
             const container = document.getElementById('subjectsContainer');
             const selectFilter = document.getElementById('filterSubject');
             
-            if (!container || !selectFilter) return;
-            
             container.innerHTML = '';
             
             subjectsList.forEach((sub, idx) => {
+                // افزودن به فرم
                 const row = document.createElement('div');
                 row.className = 'subject-row';
                 row.innerHTML = `
@@ -351,18 +354,18 @@
                 `;
                 container.appendChild(row);
 
+                // افزودن به فیلتر نمودار
                 const opt = document.createElement('option');
                 opt.value = sub;
                 opt.innerText = sub;
                 selectFilter.appendChild(opt);
             });
 
-            const dateInput = document.getElementById('examDate');
-            if (dateInput) {
-                dateInput.value = 'آزمون جدید';
-            }
+            // تنظیم تاریخ امروز به صورت پیش‌فرض
+            document.getElementById('examDate').value = new Date().toLocaleDateString('fa-IR');
         }
 
+        // محاسبه درصد بر اساس فرمول کنکور
         function calcPercentage(c, w, e) {
             const total = c + w + e;
             if (total === 0) return null;
@@ -370,9 +373,9 @@
             return Math.round(score * 10) / 10;
         }
 
+        // ذخیره آزمون
         function saveExam() {
-            const dateInput = document.getElementById('examDate');
-            const dateStr = dateInput ? dateInput.value.trim() : 'آزمون';
+            const dateStr = document.getElementById('examDate').value.trim();
             if (!dateStr) {
                 alert('لطفا تاریخ یا عنوان آزمون را وارد کنید.');
                 return;
@@ -390,13 +393,9 @@
             let enteredAny = false;
 
             subjectsList.forEach((sub, idx) => {
-                const cEl = document.getElementById(`correct_${idx}`);
-                const wEl = document.getElementById(`wrong_${idx}`);
-                const eEl = document.getElementById(`empty_${idx}`);
-
-                const c = cEl ? (parseInt(cEl.value) || 0) : 0;
-                const w = wEl ? (parseInt(wEl.value) || 0) : 0;
-                const e = eEl ? (parseInt(eEl.value) || 0) : 0;
+                const c = parseInt(document.getElementById(`correct_${idx}`).value) || 0;
+                const w = parseInt(document.getElementById(`wrong_${idx}`).value) || 0;
+                const e = parseInt(document.getElementById(`empty_${idx}`).value) || 0;
 
                 if (c > 0 || w > 0 || e > 0) {
                     enteredAny = true;
@@ -415,27 +414,26 @@
 
             examData.totalPct = calcPercentage(examData.totalCorrect, examData.totalWrong, examData.totalEmpty);
 
-            let history = getHistory();
+            let history = JSON.parse(localStorage.getItem('exam_history') || '[]');
             history.push(examData);
-            saveHistoryData(history);
+            localStorage.setItem('exam_history', JSON.stringify(history));
 
+            // پاک کردن فرم
             subjectsList.forEach((_, idx) => {
-                if (document.getElementById(`correct_${idx}`)) document.getElementById(`correct_${idx}`).value = '';
-                if (document.getElementById(`wrong_${idx}`)) document.getElementById(`wrong_${idx}`).value = '';
-                if (document.getElementById(`empty_${idx}`)) document.getElementById(`empty_${idx}`).value = '';
+                document.getElementById(`correct_${idx}`).value = '';
+                document.getElementById(`wrong_${idx}`).value = '';
+                document.getElementById(`empty_${idx}`).value = '';
             });
 
             renderAll();
             alert('آزمون با موفقیت ثبت شد!');
         }
 
+        // رندر نمودار ستونی
         function renderChart() {
             const chart = document.getElementById('barChart');
-            const filterEl = document.getElementById('filterSubject');
-            if (!chart || !filterEl) return;
-
-            const filter = filterEl.value;
-            const history = getHistory();
+            const filter = document.getElementById('filterSubject').value;
+            const history = JSON.parse(localStorage.getItem('exam_history') || '[]');
 
             chart.innerHTML = '';
 
@@ -449,13 +447,13 @@
                 if (filter === 'ALL') {
                     pct = exam.totalPct || 0;
                 } else {
-                    pct = (exam.subjects && exam.subjects[filter]) ? exam.subjects[filter].pct : 0;
+                    pct = exam.subjects[filter] ? exam.subjects[filter].pct : 0;
                 }
 
                 const barWrapper = document.createElement('div');
                 barWrapper.className = 'bar-wrapper';
 
-                const heightPct = Math.max(0, Math.min(100, pct));
+                const heightPct = Math.max(0, Math.min(100, pct)); // بین 0 تا 100
 
                 barWrapper.innerHTML = `
                     <div class="bar" style="height: ${heightPct}%;">
@@ -468,11 +466,11 @@
             });
         }
 
+        // رندر سوابق
         function renderHistory() {
             const list = document.getElementById('historyList');
-            if (!list) return;
+            const history = JSON.parse(localStorage.getItem('exam_history') || '[]');
 
-            const history = getHistory();
             list.innerHTML = '';
 
             if (history.length === 0) {
@@ -480,15 +478,13 @@
                 return;
             }
 
-            history.slice().reverse().forEach((exam) => {
+            history.slice().reverse().forEach((exam, index) => {
                 const item = document.createElement('div');
                 item.className = 'history-item';
 
                 let detailsHtml = '';
-                if (exam.subjects) {
-                    for (const [subName, subData] of Object.entries(exam.subjects)) {
-                        detailsHtml += `<div><strong>${subName}:</strong> ${subData.pct}% (درست: ${subData.c} | نادرست: ${subData.w})</div>`;
-                    }
+                for (const [subName, subData] of Object.entries(exam.subjects)) {
+                    detailsHtml += `<div><strong>${subName}:</strong> ${subData.pct}% (درست: ${subData.c} | نادرست: ${subData.w})</div>`;
                 }
 
                 item.innerHTML = `
@@ -517,13 +513,10 @@
             renderHistory();
         }
 
-        // اجرای مستقیم بدون نیاز به window.onload
-        try {
+        window.onload = function() {
             initForm();
             renderAll();
-        } catch (err) {
-            console.error(err);
-        }
+        };
     </script>
 </body>
 </html>
