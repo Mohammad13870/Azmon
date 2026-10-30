@@ -357,14 +357,9 @@
                 selectFilter.appendChild(opt);
             });
 
-            // تنظیم مقدار پیش‌فرض تاریخ بدون ایجاد خطای سیستم
             const dateInput = document.getElementById('examDate');
             if (dateInput) {
-                try {
-                    dateInput.value = new Date().toLocaleDateString('fa-IR');
-                } catch (e) {
-                    dateInput.value = 'آزمون جدید';
-                }
+                dateInput.value = 'آزمون جدید';
             }
         }
 
@@ -522,14 +517,13 @@
             renderHistory();
         }
 
-        window.onload = function() {
-            try {
-                initForm();
-                renderAll();
-            } catch (err) {
-                console.error(err);
-            }
-        };
+        // اجرای مستقیم بدون نیاز به window.onload
+        try {
+            initForm();
+            renderAll();
+        } catch (err) {
+            console.error(err);
+        }
     </script>
 </body>
 </html>
